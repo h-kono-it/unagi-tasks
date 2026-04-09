@@ -62,8 +62,8 @@ document.addEventListener("submit", (e) => {
     'input[name="action"]',
   )?.value;
 
-  // action="add" は capture ハンドラで処理済み
-  if (action === "add") return;
+  // capture ハンドラ処理済み or ページリロードで自然防止されるものはスキップ
+  if (action === "add" || action === "set_energy") return;
 
   // 完了・削除はメインページのみ楽観的に処理（focusArea が存在する場合）
   if ((action === "complete" || action === "delete") && focusArea) {
