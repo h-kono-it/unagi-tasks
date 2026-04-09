@@ -71,42 +71,50 @@ export default define.page<typeof handlers>(function Tasks({ data }) {
             {tasks.map((task, i) => (
               <li
                 key={task.id}
-                class="flex items-center gap-3 px-4 py-3 bg-gray-900 border border-gray-800 rounded-lg"
+                class="px-4 py-3 bg-gray-900 border border-gray-800 rounded-lg"
               >
-                <span class="text-xs text-gray-600 w-4 shrink-0">{i + 1}</span>
-                <span class="flex-1 text-sm">{task.title}</span>
-                <span class="text-xs text-gray-600">
-                  {ORIGIN_LABEL[task.origin]} ／ 重{LEVEL_LABEL[task.priority]} ／ 集{LEVEL_LABEL[task.energy]}
-                </span>
-                {dueLabel(task.dueAt) && (
-                  <span class={`text-xs ${dueColor(task.dueAt)}`}>
-                    {dueLabel(task.dueAt)}
-                  </span>
-                )}
-                <div class="flex items-center gap-3">
-                  <a
-                    href={`/tasks/${task.id}/edit`}
-                    class="text-xs text-gray-600 hover:text-white"
-                  >
-                    編集
-                  </a>
-                  <form method="POST" class="flex gap-2">
-                    <input type="hidden" name="id" value={task.id} />
-                    <button
-                      name="action"
-                      value="complete"
-                      class="text-xs text-gray-600 hover:text-green-400"
+                {/* 1行目: 番号 + タイトル */}
+                <div class="flex items-start gap-2 mb-2">
+                  <span class="text-xs text-gray-600 w-4 shrink-0 pt-0.5">{i + 1}</span>
+                  <span class="flex-1 text-sm leading-snug">{task.title}</span>
+                </div>
+                {/* 2行目: 属性 + アクション */}
+                <div class="flex items-center justify-between pl-6">
+                  <div class="flex items-center gap-2 flex-wrap">
+                    <span class="text-xs text-gray-600">
+                      {ORIGIN_LABEL[task.origin]} ／ 重{LEVEL_LABEL[task.priority]} ／ 集{LEVEL_LABEL[task.energy]}
+                    </span>
+                    {dueLabel(task.dueAt) && (
+                      <span class={`text-xs ${dueColor(task.dueAt)}`}>
+                        {dueLabel(task.dueAt)}
+                      </span>
+                    )}
+                  </div>
+                  <div class="flex items-center gap-3 shrink-0 ml-2">
+                    <a
+                      href={`/tasks/${task.id}/edit`}
+                      class="text-xs text-gray-600 hover:text-white"
                     >
-                      完了
-                    </button>
-                    <button
-                      name="action"
-                      value="delete"
-                      class="text-xs text-gray-600 hover:text-red-400"
-                    >
-                      削除
-                    </button>
-                  </form>
+                      編集
+                    </a>
+                    <form method="POST" class="flex gap-2">
+                      <input type="hidden" name="id" value={task.id} />
+                      <button
+                        name="action"
+                        value="complete"
+                        class="text-xs text-gray-600 hover:text-green-400"
+                      >
+                        完了
+                      </button>
+                      <button
+                        name="action"
+                        value="delete"
+                        class="text-xs text-gray-600 hover:text-red-400"
+                      >
+                        削除
+                      </button>
+                    </form>
+                  </div>
                 </div>
               </li>
             ))}

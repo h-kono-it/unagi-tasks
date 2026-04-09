@@ -28,6 +28,7 @@ export const handlers = define.handlers({
 
     return page({
       currentTask: sorted[0] ?? null,
+      allSkipped: allTasks.length > 0 && sorted.length === 0,
       inboxCount: inboxItems.length,
       userEnergy,
     });
@@ -59,7 +60,7 @@ const ENERGY_LABELS: Record<1 | 2 | 3, string> = { 1: "低", 2: "中", 3: "高" 
 
 export default define.page<typeof handlers>(function Home({ data, state, url }) {
   const session = state.session!;
-  const { currentTask, inboxCount, userEnergy } = data;
+  const { currentTask, allSkipped, inboxCount, userEnergy } = data;
 
   const skipUrl = currentTask ? (() => {
     const u = new URL(url);
@@ -70,53 +71,56 @@ export default define.page<typeof handlers>(function Home({ data, state, url }) 
   return (
     <main class="min-h-screen max-w-2xl mx-auto px-4 py-10 flex flex-col">
       {/* ヘッダー */}
-      <div class="flex items-center justify-between mb-10">
-        <div class="flex items-center gap-4">
-          <a
-            href="/triage"
-            class="flex items-center gap-2 text-sm text-gray-400 hover:text-white"
-          >
-            インボックス
-            {inboxCount > 0 && (
-              <span class="px-2 py-0.5 bg-blue-600 text-white text-xs rounded-full">
-                {inboxCount}
-              </span>
-            )}
-          </a>
-          <a href="/tasks" class="text-sm text-gray-400 hover:text-white">
-            タスク一覧
-          </a>
-        </div>
-        <form method="POST" class="flex items-center gap-1">
-          <input type="hidden" name="action" value="set_energy" />
-          <span class="text-xs text-gray-600 mr-1">集中度</span>
-          {([1, 2, 3] as const).map((e) => (
-            <button
-              key={e}
-              type="submit"
-              name="energy"
-              value={String(e)}
-              class={`px-2 py-0.5 rounded text-xs ${
-                userEnergy === e
-                  ? "bg-white text-black"
-                  : "text-gray-500 hover:text-white"
-              }`}
+      <div class="mb-8 space-y-3">
+        {/* 1行目: ナビ + サインアウト */}
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-4">
+            <a
+              href="/triage"
+              class="flex items-center gap-1.5 text-sm text-gray-400 hover:text-white"
             >
-              {ENERGY_LABELS[e]}
-            </button>
-          ))}
-        </form>
-        <div class="flex items-center gap-3">
-          <span class="text-xs text-gray-600">{session.githubLogin}</span>
+              インボックス
+              {inboxCount > 0 && (
+                <span class="px-1.5 py-0.5 bg-blue-600 text-white text-xs rounded-full leading-none">
+                  {inboxCount}
+                </span>
+              )}
+            </a>
+            <a href="/tasks" class="text-sm text-gray-400 hover:text-white">
+              タスク一覧
+            </a>
+          </div>
           <form method="POST" action="/auth/signout">
             <button
               type="submit"
               class="text-xs text-gray-600 hover:text-gray-400"
             >
-              サインアウト
+              {session.githubLogin} · サインアウト
             </button>
           </form>
         </div>
+        {/* 2行目: 集中度セレクター */}
+        <form method="POST" class="flex items-center gap-2">
+          <input type="hidden" name="action" value="set_energy" />
+          <span class="text-xs text-gray-600 shrink-0">集中度</span>
+          <div class="flex flex-1 gap-2">
+            {([1, 2, 3] as const).map((e) => (
+              <button
+                key={e}
+                type="submit"
+                name="energy"
+                value={String(e)}
+                class={`flex-1 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                  userEnergy === e
+                    ? "bg-white text-black"
+                    : "bg-gray-900 text-gray-500 hover:text-white"
+                }`}
+              >
+                {ENERGY_LABELS[e]}
+              </button>
+            ))}
+          </div>
+        </form>
       </div>
 
       {/* フォーカスエリア */}
@@ -168,9 +172,21 @@ export default define.page<typeof handlers>(function Home({ data, state, url }) 
               </div>
             </>
           )
+          : allSkipped
+          ? (
+            <div class="text-center">
+              <p class="text-gray-400 mb-6">スキップしたタスクがあります</p>
+              <a
+                href="/"
+                class="px-6 py-3 bg-gray-800 hover:bg-gray-700 rounded-lg font-medium"
+              >
+                最初からやり直す
+              </a>
+            </div>
+          )
           : inboxCount > 0
           ? (
-            <div>
+            <div class="text-center">
               <p class="text-gray-400 mb-6">整理待ちのタスクがあります</p>
               <a
                 href="/triage"
