@@ -175,29 +175,3 @@ if (triageArea) {
   });
 }
 
-// --- 集中度切り替え（楽観的UI） ---
-document.querySelectorAll<HTMLButtonElement>('button[name="energy"]').forEach(
-  (btn) => {
-    btn.addEventListener("click", (e) => {
-      e.preventDefault();
-      const energy = btn.value;
-
-      // ハイライト即時更新
-      document
-        .querySelectorAll<HTMLButtonElement>('button[name="energy"]')
-        .forEach((b) => {
-          const active = b.value === energy;
-          b.classList.toggle("bg-white", active);
-          b.classList.toggle("text-black", active);
-          b.classList.toggle("bg-gray-900", !active);
-          b.classList.toggle("text-gray-500", !active);
-        });
-
-      // バックグラウンドでPOST
-      const form = btn.closest("form")!;
-      const formData = new FormData(form);
-      formData.set("energy", energy);
-      fetch(form.getAttribute("action") || location.pathname, { method: "POST", body: formData });
-    });
-  },
-);
