@@ -1,0 +1,12 @@
+# Fresh build output
+_fresh/
+
+# 環境変数（絶対にコミットしない）
+.env
+
+# Deno
+.deno/
+node_modules/
+
+
+.claude/*.local.*
