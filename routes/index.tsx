@@ -129,11 +129,14 @@ export default define.page<typeof handlers>(function Home({ data, state }) {
               class="flex items-center gap-1.5 text-sm text-gray-400 hover:text-white"
             >
               インボックス
-              {inboxCount > 0 && (
-                <span class="px-1.5 py-0.5 bg-blue-600 text-white text-xs rounded-full leading-none">
-                  {inboxCount}
-                </span>
-              )}
+              <span
+                id="inbox-badge"
+                class={`px-1.5 py-0.5 bg-blue-600 text-white text-xs rounded-full leading-none${
+                  inboxCount === 0 ? " hidden" : ""
+                }`}
+              >
+                {inboxCount || 0}
+              </span>
             </a>
             <a href="/tasks" class="text-sm text-gray-400 hover:text-white">
               タスク一覧
@@ -201,7 +204,7 @@ export default define.page<typeof handlers>(function Home({ data, state }) {
                 href="/triage"
                 class="px-6 py-3 bg-blue-700 hover:bg-blue-600 rounded-lg font-medium"
               >
-                インボックスを整理する（{inboxCount}件）
+                インボックスを整理する（<span id="triage-count">{inboxCount}</span>件）
               </a>
             </div>
           )

@@ -3,6 +3,7 @@ import { define } from "../utils.ts";
 import {
   deleteFromInbox,
   listInbox,
+  type InboxItem,
   promoteToTask,
   type Task,
 } from "../utils/db.ts";
@@ -14,7 +15,7 @@ export const handlers = define.handlers({
     if (items.length === 0) {
       return new Response(null, { status: 302, headers: { Location: "/" } });
     }
-    return page({ item: items[0], remaining: items.length });
+    return page({ items });
   },
 
   async POST(ctx) {
@@ -39,22 +40,10 @@ export const handlers = define.handlers({
   },
 });
 
-export default define.page<typeof handlers>(function Triage({ data }) {
-  const { item, remaining } = data;
-
-
+function TriageSlide({ item, first }: { item: InboxItem; first: boolean }) {
   return (
-    <main class="min-h-screen max-w-lg mx-auto px-4 py-10">
-      {/* ヘッダー */}
-      <div class="flex items-center justify-between mb-8">
-        <div class="flex items-center gap-3">
-          <a href="/" class="text-gray-500 hover:text-white text-sm">← 戻る</a>
-          <h1 class="text-sm font-medium text-gray-300">インボックス整理</h1>
-        </div>
-        <span class="text-sm text-gray-500">{remaining}件残り</span>
-      </div>
-
-      {/* タイトル表示 */}
+    <div class={`triage-slide${first ? "" : " hidden"}`}>
+      {/* タイトル */}
       <div class="bg-gray-900 border border-gray-800 rounded-xl px-6 py-5 mb-8">
         <p class="text-xl font-medium leading-snug">{item.title}</p>
       </div>
@@ -164,6 +153,42 @@ export default define.page<typeof handlers>(function Triage({ data }) {
           削除（不要だった）
         </button>
       </form>
+    </div>
+  );
+}
+
+export default define.page<typeof handlers>(function Triage({ data }) {
+  const { items } = data;
+
+  return (
+    <main class="min-h-screen max-w-lg mx-auto px-4 py-10">
+      {/* ヘッダー */}
+      <div class="flex items-center justify-between mb-8">
+        <div class="flex items-center gap-3">
+          <a href="/" class="text-gray-500 hover:text-white text-sm">← 戻る</a>
+          <h1 class="text-sm font-medium text-gray-300">インボックス整理</h1>
+        </div>
+        <span class="text-sm text-gray-500">
+          <span id="triage-remaining">{items.length}</span>件残り
+        </span>
+      </div>
+
+      <div id="triage-area">
+        {items.map((item, i) => (
+          <TriageSlide key={item.id} item={item} first={i === 0} />
+        ))}
+
+        {/* 全件処理完了（最後の1件はサーバー側リダイレクトで処理） */}
+        <div id="triage-done" class="hidden text-center py-20">
+          <p class="text-gray-400 mb-6">インボックスは空です</p>
+          <a
+            href="/"
+            class="px-6 py-3 bg-gray-800 hover:bg-gray-700 rounded-lg font-medium"
+          >
+            ホームへ戻る
+          </a>
+        </div>
+      </div>
     </main>
   );
 });
