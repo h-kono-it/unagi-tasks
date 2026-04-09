@@ -75,17 +75,14 @@ export async function listActiveTasks(githubId: number): Promise<Task[]> {
   const kv = await getKv();
   const tasks: Task[] = [];
   for await (const entry of kv.list<Task>({ prefix: ["tasks", githubId] })) {
-    if (entry.value.status === "todo") tasks.push(entry.value);
+    tasks.push(entry.value);
   }
   return tasks;
 }
 
 export async function completeTask(githubId: number, id: string): Promise<void> {
   const kv = await getKv();
-  const result = await kv.get<Task>(["tasks", githubId, id]);
-  if (result.value) {
-    await kv.set(["tasks", githubId, id], { ...result.value, status: "done" });
-  }
+  await kv.delete(["tasks", githubId, id]);
 }
 
 export async function deleteTask(githubId: number, id: string): Promise<void> {

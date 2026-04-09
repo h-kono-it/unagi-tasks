@@ -10,11 +10,11 @@ import {
   setUserEnergy,
 } from "../utils/db.ts";
 import { sortTasksByScore } from "../utils/logic.ts";
+import type { Task } from "../utils/db.ts";
 
 export const handlers = define.handlers({
   async GET(ctx) {
     const { githubId } = ctx.state.session!;
-    const skippedIds = new URL(ctx.req.url).searchParams.getAll("skip");
 
     const [allTasks, inboxItems, userEnergy] = await Promise.all([
       listActiveTasks(githubId),
@@ -22,13 +22,8 @@ export const handlers = define.handlers({
       getUserEnergy(githubId),
     ]);
 
-    const sorted = sortTasksByScore(allTasks, userEnergy).filter(
-      (t) => !skippedIds.includes(t.id),
-    );
-
     return page({
-      currentTask: sorted[0] ?? null,
-      allSkipped: allTasks.length > 0 && sorted.length === 0,
+      tasks: sortTasksByScore(allTasks, userEnergy),
       inboxCount: inboxItems.length,
       userEnergy,
     });
@@ -57,16 +52,70 @@ export const handlers = define.handlers({
 });
 
 const ENERGY_LABELS: Record<1 | 2 | 3, string> = { 1: "低", 2: "中", 3: "高" };
+const DAY_MS = 1000 * 60 * 60 * 24;
 
-export default define.page<typeof handlers>(function Home({ data, state, url }) {
+function DueLabel({ dueAt }: { dueAt: number }) {
+  const d = Math.floor(dueAt / DAY_MS) - Math.floor(Date.now() / DAY_MS);
+  const label = d < 0
+    ? `${Math.abs(d)}日超過`
+    : d === 0
+    ? "今日が期日"
+    : `期日まで${d}日`;
+  const color = d < 0
+    ? "text-red-400"
+    : d === 0
+    ? "text-orange-400"
+    : "text-yellow-400";
+  return <p class={`text-sm mb-10 ${color}`}>{label}</p>;
+}
+
+function TaskCard({ task, first }: { task: Task; first: boolean }) {
+  return (
+    <div
+      class={`task-card w-full${first ? "" : " hidden"}`}
+      data-task-id={task.id}
+    >
+      <p class="text-xs text-gray-500 tracking-widest uppercase mb-6">
+        今やること
+      </p>
+      <h2 class="text-4xl font-bold leading-snug mb-4">{task.title}</h2>
+      {task.dueAt ? <DueLabel dueAt={task.dueAt} /> : <div class="mb-12" />}
+      <div class="flex gap-3 justify-center">
+        <form method="POST">
+          <input type="hidden" name="action" value="complete" />
+          <input type="hidden" name="id" value={task.id} />
+          <button
+            type="submit"
+            class="px-8 py-3 bg-green-600 hover:bg-green-500 rounded-lg font-medium"
+          >
+            完了
+          </button>
+        </form>
+        <button
+          type="button"
+          data-skip
+          class="px-8 py-3 bg-gray-800 hover:bg-gray-700 rounded-lg font-medium"
+        >
+          スキップ
+        </button>
+        <form method="POST">
+          <input type="hidden" name="action" value="delete" />
+          <input type="hidden" name="id" value={task.id} />
+          <button
+            type="submit"
+            class="px-8 py-3 bg-gray-900 hover:bg-red-950 text-gray-500 hover:text-red-400 rounded-lg font-medium"
+          >
+            削除
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+export default define.page<typeof handlers>(function Home({ data, state }) {
   const session = state.session!;
-  const { currentTask, allSkipped, inboxCount, userEnergy } = data;
-
-  const skipUrl = currentTask ? (() => {
-    const u = new URL(url);
-    u.searchParams.append("skip", currentTask.id);
-    return u.toString();
-  })() : "/";
+  const { tasks, inboxCount, userEnergy } = data;
 
   return (
     <main class="min-h-screen max-w-2xl mx-auto px-4 py-10 flex flex-col">
@@ -123,66 +172,26 @@ export default define.page<typeof handlers>(function Home({ data, state, url }) 
         </form>
       </div>
 
-      {/* フォーカスエリア */}
-      <div class="flex-1 flex flex-col items-center justify-center text-center">
-        {currentTask
+      {/* フォーカスエリア: 全タスクをSSRして hidden で制御、スキップはclient.tsで処理 */}
+      <div
+        id="focus-area"
+        class="flex-1 flex flex-col items-center justify-center text-center"
+      >
+        {tasks.length > 0
           ? (
             <>
-              <p class="text-xs text-gray-500 tracking-widest uppercase mb-6">
-                今やること
-              </p>
-              <h2 class="text-4xl font-bold leading-snug mb-4">
-                {currentTask.title}
-              </h2>
-              {currentTask.dueAt && (() => {
-                const DAY_MS = 1000 * 60 * 60 * 24;
-                const d = Math.floor(currentTask.dueAt / DAY_MS) - Math.floor(Date.now() / DAY_MS);
-                const label = d < 0 ? `${Math.abs(d)}日超過` : d === 0 ? "今日が期日" : `期日まで${d}日`;
-                const color = d < 0 ? "text-red-400" : d === 0 ? "text-orange-400" : "text-yellow-400";
-                return <p class={`text-sm mb-10 ${color}`}>{label}</p>;
-              })()}
-              {!currentTask.dueAt && <div class="mb-12" />}
-              <div class="flex gap-3">
-                <form method="POST">
-                  <input type="hidden" name="action" value="complete" />
-                  <input type="hidden" name="id" value={currentTask.id} />
-                  <button
-                    type="submit"
-                    class="px-8 py-3 bg-green-600 hover:bg-green-500 rounded-lg font-medium"
-                  >
-                    完了
-                  </button>
-                </form>
-                <a
-                  href={skipUrl}
-                  class="px-8 py-3 bg-gray-800 hover:bg-gray-700 rounded-lg font-medium"
+              {tasks.map((task, i) => <TaskCard task={task} first={i === 0} />)}
+              <div id="all-skipped" class="hidden">
+                <p class="text-gray-400 mb-6">スキップしたタスクがあります</p>
+                <button
+                  id="reset-skip"
+                  type="button"
+                  class="px-6 py-3 bg-gray-800 hover:bg-gray-700 rounded-lg font-medium"
                 >
-                  スキップ
-                </a>
-                <form method="POST">
-                  <input type="hidden" name="action" value="delete" />
-                  <input type="hidden" name="id" value={currentTask.id} />
-                  <button
-                    type="submit"
-                    class="px-8 py-3 bg-gray-900 hover:bg-red-950 text-gray-500 hover:text-red-400 rounded-lg font-medium"
-                  >
-                    削除
-                  </button>
-                </form>
+                  最初からやり直す
+                </button>
               </div>
             </>
-          )
-          : allSkipped
-          ? (
-            <div class="text-center">
-              <p class="text-gray-400 mb-6">スキップしたタスクがあります</p>
-              <a
-                href="/"
-                class="px-6 py-3 bg-gray-800 hover:bg-gray-700 rounded-lg font-medium"
-              >
-                最初からやり直す
-              </a>
-            </div>
           )
           : inboxCount > 0
           ? (
