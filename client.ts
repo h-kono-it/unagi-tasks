@@ -88,8 +88,9 @@ document.addEventListener("submit", (e) => {
     }
   }
 
-  // その他フォームの二重送信防止
+  // その他フォームの二重送信防止（押したボタンだけ disabled）
   const btn =
+    (e as SubmitEvent).submitter as HTMLButtonElement | null ??
     form.querySelector<HTMLButtonElement>("button[type=submit]") ??
     form.querySelector<HTMLButtonElement>("button:not([type=button])");
   if (btn) btn.disabled = true;
