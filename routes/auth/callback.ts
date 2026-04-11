@@ -1,7 +1,7 @@
 import { define } from "../../utils.ts";
 import { createSession } from "../../utils/session.ts";
 
-export const handlers = define.handlers({
+export const handler = define.handlers({
   async GET(ctx) {
     const url = new URL(ctx.req.url);
     const code = url.searchParams.get("code");
@@ -20,21 +20,29 @@ export const handlers = define.handlers({
 
     const clientId = Deno.env.get("GITHUB_CLIENT_ID")!;
     const clientSecret = Deno.env.get("GITHUB_CLIENT_SECRET")!;
-    const allowedGithubId = Number(Deno.env.get("ALLOWED_GITHUB_ID"));
 
     // アクセストークンの取得
-    const tokenRes = await fetch("https://github.com/login/oauth/access_token", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
+    const tokenRes = await fetch(
+      "https://github.com/login/oauth/access_token",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify({
+          client_id: clientId,
+          client_secret: clientSecret,
+          code,
+        }),
       },
-      body: JSON.stringify({ client_id: clientId, client_secret: clientSecret, code }),
-    });
+    );
     const tokenData = await tokenRes.json();
 
     if (!tokenData.access_token) {
-      return new Response("アクセストークンの取得に失敗しました", { status: 401 });
+      return new Response("アクセストークンの取得に失敗しました", {
+        status: 401,
+      });
     }
 
     // GitHubユーザー情報の取得
@@ -45,11 +53,6 @@ export const handlers = define.handlers({
       },
     });
     const user = await userRes.json();
-
-    // ホワイトリストチェック
-    if (user.id !== allowedGithubId) {
-      return new Response("アクセスが許可されていません", { status: 403 });
-    }
 
     // セッション発行
     const sessionId = await createSession({
@@ -65,7 +68,9 @@ export const handlers = define.handlers({
     const headers = new Headers({ Location: "/" });
     headers.append(
       "Set-Cookie",
-      `session_id=${sessionId}; ${cookieFlags}; Max-Age=${30 * 24 * 60 * 60}; Path=/`,
+      `session_id=${sessionId}; ${cookieFlags}; Max-Age=${
+        30 * 24 * 60 * 60
+      }; Path=/`,
     );
 
     return new Response(null, { status: 302, headers });

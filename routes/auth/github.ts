@@ -1,10 +1,12 @@
 import { define } from "../../utils.ts";
 
-export const handlers = define.handlers({
+export const handler = define.handlers({
   GET() {
     const clientId = Deno.env.get("GITHUB_CLIENT_ID");
     if (!clientId) {
-      return new Response("GITHUB_CLIENT_ID が設定されていません", { status: 500 });
+      return new Response("GITHUB_CLIENT_ID が設定されていません", {
+        status: 500,
+      });
     }
 
     const state = crypto.randomUUID();

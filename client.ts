@@ -71,8 +71,7 @@ document.addEventListener("submit", (e) => {
       'input[name="id"]',
     )?.value;
     if (taskId) {
-      const isLast =
-        focusArea.querySelectorAll(".task-card").length <= 1;
+      const isLast = focusArea.querySelectorAll(".task-card").length <= 1;
 
       if (!isLast) {
         // 複数タスクあり: 楽観的にカード削除 → バックグラウンドPOST
@@ -81,7 +80,10 @@ document.addEventListener("submit", (e) => {
           .querySelector<HTMLElement>(`.task-card[data-task-id="${taskId}"]`)
           ?.remove();
         syncView();
-        fetch(form.getAttribute("action") || location.pathname, { method: "POST", body: new FormData(form) });
+        fetch(form.getAttribute("action") || location.pathname, {
+          method: "POST",
+          body: new FormData(form),
+        });
         return;
       }
       // 最後の1件: 通常のフォーム送信（リロードでタスクなし表示）
@@ -89,8 +91,7 @@ document.addEventListener("submit", (e) => {
   }
 
   // その他フォームの二重送信防止（押したボタンだけ disabled）
-  const btn =
-    (e as SubmitEvent).submitter as HTMLButtonElement | null ??
+  const btn = (e as SubmitEvent).submitter as HTMLButtonElement | null ??
     form.querySelector<HTMLButtonElement>("button[type=submit]") ??
     form.querySelector<HTMLButtonElement>("button:not([type=button])");
   if (btn) btn.disabled = true;
@@ -127,7 +128,6 @@ document.addEventListener("submit", (e) => {
   if (triageCount) triageCount.textContent = String(next);
 }, true); // capture: 二重送信防止ハンドラより前に処理
 
-
 // --- インボックス整理（楽観的UI） ---
 const triageArea = document.getElementById("triage-area");
 if (triageArea) {
@@ -148,7 +148,7 @@ if (triageArea) {
       // 最後の1件: 通常のフォーム送信（サーバーが / にリダイレクト）
       const btn =
         form.querySelector<HTMLButtonElement>("button[type=submit]") ??
-        form.querySelector<HTMLButtonElement>("button:not([type=button])");
+          form.querySelector<HTMLButtonElement>("button:not([type=button])");
       if (btn) btn.disabled = true;
       return;
     }
@@ -171,8 +171,8 @@ if (triageArea) {
     }
 
     // 残り件数を更新
-    const remaining = triageArea.querySelectorAll(".triage-slide:not(.hidden)").length;
+    const remaining =
+      triageArea.querySelectorAll(".triage-slide:not(.hidden)").length;
     if (remainingEl) remainingEl.textContent = String(remaining);
   });
 }
-

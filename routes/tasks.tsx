@@ -3,7 +3,7 @@ import { define } from "../utils.ts";
 import { completeTask, deleteTask, listActiveTasks } from "../utils/db.ts";
 import { sortTasksByScore } from "../utils/logic.ts";
 
-export const handlers = define.handlers({
+export const handler = define.handlers({
   async GET(ctx) {
     const { githubId } = ctx.state.session!;
     const tasks = await listActiveTasks(githubId);
@@ -51,7 +51,7 @@ function dueColor(dueAt?: number): string {
   return "text-gray-500";
 }
 
-export default define.page<typeof handlers>(function Tasks({ data }) {
+export default define.page<typeof handler>(function Tasks({ data }) {
   const { tasks } = data;
 
   return (
@@ -63,9 +63,7 @@ export default define.page<typeof handlers>(function Tasks({ data }) {
       </div>
 
       {tasks.length === 0
-        ? (
-          <p class="text-center text-gray-600 py-20">未完了タスクなし</p>
-        )
+        ? <p class="text-center text-gray-600 py-20">未完了タスクなし</p>
         : (
           <ul class="space-y-2">
             {tasks.map((task, i) => (
@@ -75,14 +73,18 @@ export default define.page<typeof handlers>(function Tasks({ data }) {
               >
                 {/* 1行目: 番号 + タイトル */}
                 <div class="flex items-start gap-2 mb-2">
-                  <span class="text-xs text-gray-600 w-4 shrink-0 pt-0.5">{i + 1}</span>
+                  <span class="text-xs text-gray-600 w-4 shrink-0 pt-0.5">
+                    {i + 1}
+                  </span>
                   <span class="flex-1 text-sm leading-snug">{task.title}</span>
                 </div>
                 {/* 2行目: 属性 + アクション */}
                 <div class="flex items-center justify-between pl-6">
                   <div class="flex items-center gap-2 flex-wrap">
                     <span class="text-xs text-gray-600">
-                      {ORIGIN_LABEL[task.origin]} ／ 重{LEVEL_LABEL[task.priority]} ／ 集{LEVEL_LABEL[task.energy]}
+                      {ORIGIN_LABEL[task.origin]}{" "}
+                      ／ 重{LEVEL_LABEL[task.priority]}{" "}
+                      ／ 集{LEVEL_LABEL[task.energy]}
                     </span>
                     {dueLabel(task.dueAt) && (
                       <span class={`text-xs ${dueColor(task.dueAt)}`}>
@@ -100,6 +102,7 @@ export default define.page<typeof handlers>(function Tasks({ data }) {
                     <form method="POST" class="flex gap-2">
                       <input type="hidden" name="id" value={task.id} />
                       <button
+                        type="submit"
                         name="action"
                         value="complete"
                         class="text-xs text-gray-600 hover:text-green-400"
@@ -107,6 +110,7 @@ export default define.page<typeof handlers>(function Tasks({ data }) {
                         完了
                       </button>
                       <button
+                        type="submit"
                         name="action"
                         value="delete"
                         class="text-xs text-gray-600 hover:text-red-400"

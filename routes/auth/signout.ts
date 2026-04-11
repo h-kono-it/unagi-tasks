@@ -1,7 +1,7 @@
 import { define } from "../../utils.ts";
 import { deleteSession } from "../../utils/session.ts";
 
-export const handlers = define.handlers({
+export const handler = define.handlers({
   async POST(ctx) {
     const cookie = ctx.req.headers.get("cookie") ?? "";
     const match = cookie.match(/(?:^|; )session_id=([^;]*)/);

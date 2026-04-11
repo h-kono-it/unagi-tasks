@@ -1,7 +1,13 @@
 import { define } from "../utils.ts";
 import { getSession } from "../utils/session.ts";
 
-const PUBLIC_PATHS = ["/auth/signin", "/auth/callback"];
+const PUBLIC_PATHS = [
+  "/auth/signin",
+  "/auth/callback",
+  "/auth/github",
+  "/privacy",
+  "/terms",
+];
 
 export default define.middleware(async (ctx) => {
   const url = new URL(ctx.req.url);

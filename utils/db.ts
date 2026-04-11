@@ -31,7 +31,11 @@ export async function addToInbox(
   title: string,
 ): Promise<InboxItem> {
   const kv = await getKv();
-  const item: InboxItem = { id: crypto.randomUUID(), title, createdAt: Date.now() };
+  const item: InboxItem = {
+    id: crypto.randomUUID(),
+    title,
+    createdAt: Date.now(),
+  };
   await kv.set(["inbox", githubId, item.id], item);
   return item;
 }
@@ -39,13 +43,18 @@ export async function addToInbox(
 export async function listInbox(githubId: number): Promise<InboxItem[]> {
   const kv = await getKv();
   const items: InboxItem[] = [];
-  for await (const entry of kv.list<InboxItem>({ prefix: ["inbox", githubId] })) {
+  for await (
+    const entry of kv.list<InboxItem>({ prefix: ["inbox", githubId] })
+  ) {
     items.push(entry.value);
   }
   return items.sort((a, b) => a.createdAt - b.createdAt); // 古い順（整理しやすい）
 }
 
-export async function deleteFromInbox(githubId: number, id: string): Promise<void> {
+export async function deleteFromInbox(
+  githubId: number,
+  id: string,
+): Promise<void> {
   const kv = await getKv();
   await kv.delete(["inbox", githubId, id]);
 }
@@ -80,7 +89,10 @@ export async function listActiveTasks(githubId: number): Promise<Task[]> {
   return tasks;
 }
 
-export async function completeTask(githubId: number, id: string): Promise<void> {
+export async function completeTask(
+  githubId: number,
+  id: string,
+): Promise<void> {
   const kv = await getKv();
   await kv.delete(["tasks", githubId, id]);
 }
@@ -90,7 +102,10 @@ export async function deleteTask(githubId: number, id: string): Promise<void> {
   await kv.delete(["tasks", githubId, id]);
 }
 
-export async function getTask(githubId: number, id: string): Promise<Task | null> {
+export async function getTask(
+  githubId: number,
+  id: string,
+): Promise<Task | null> {
   const kv = await getKv();
   const result = await kv.get<Task>(["tasks", githubId, id]);
   return result.value;
@@ -121,4 +136,17 @@ export async function setUserEnergy(
 ): Promise<void> {
   const kv = await getKv();
   await kv.set(["user_energy", githubId], energy);
+}
+
+// --- Account ---
+
+export async function deleteAllUserData(githubId: number): Promise<void> {
+  const kv = await getKv();
+  for await (const entry of kv.list({ prefix: ["inbox", githubId] })) {
+    await kv.delete(entry.key);
+  }
+  for await (const entry of kv.list({ prefix: ["tasks", githubId] })) {
+    await kv.delete(entry.key);
+  }
+  await kv.delete(["user_energy", githubId]);
 }

@@ -12,7 +12,7 @@ import {
 import { sortTasksByScore } from "../utils/logic.ts";
 import type { Task } from "../utils/db.ts";
 
-export const handlers = define.handlers({
+export const handler = define.handlers({
   async GET(ctx) {
     const { githubId } = ctx.state.session!;
 
@@ -113,7 +113,7 @@ function TaskCard({ task, first }: { task: Task; first: boolean }) {
   );
 }
 
-export default define.page<typeof handlers>(function Home({ data, state }) {
+export default define.page<typeof handler>(function Home({ data, state }) {
   const session = state.session!;
   const { tasks, inboxCount, userEnergy } = data;
 
@@ -142,14 +142,22 @@ export default define.page<typeof handlers>(function Home({ data, state }) {
               タスク一覧
             </a>
           </div>
-          <form method="POST" action="/auth/signout">
-            <button
-              type="submit"
+          <div class="flex items-center gap-3">
+            <a
+              href="/account"
               class="text-xs text-gray-600 hover:text-gray-400"
             >
-              {session.githubLogin} · サインアウト
-            </button>
-          </form>
+              {session.githubLogin}
+            </a>
+            <form method="POST" action="/auth/signout">
+              <button
+                type="submit"
+                class="text-xs text-gray-600 hover:text-gray-400"
+              >
+                サインアウト
+              </button>
+            </form>
+          </div>
         </div>
         {/* 2行目: 集中度セレクター */}
         <form method="POST" class="flex items-center gap-2">
@@ -183,7 +191,9 @@ export default define.page<typeof handlers>(function Home({ data, state }) {
         {tasks.length > 0
           ? (
             <>
-              {tasks.map((task, i) => <TaskCard task={task} first={i === 0} />)}
+              {tasks.map((task, i) => (
+                <TaskCard key={task.id} task={task} first={i === 0} />
+              ))}
               <div id="all-skipped" class="hidden">
                 <p class="text-gray-400 mb-6">スキップしたタスクがあります</p>
                 <button
@@ -204,13 +214,13 @@ export default define.page<typeof handlers>(function Home({ data, state }) {
                 href="/triage"
                 class="px-6 py-3 bg-blue-700 hover:bg-blue-600 rounded-lg font-medium"
               >
-                インボックスを整理する（<span id="triage-count">{inboxCount}</span>件）
+                インボックスを整理する（<span id="triage-count">
+                  {inboxCount}
+                </span>件）
               </a>
             </div>
           )
-          : (
-            <p class="text-gray-500">タスクなし。お疲れさまでした！</p>
-          )}
+          : <p class="text-gray-500">タスクなし。お疲れさまでした！</p>}
       </div>
 
       {/* クイック入力 */}

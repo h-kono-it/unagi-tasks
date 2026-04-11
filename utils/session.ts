@@ -15,7 +15,9 @@ export interface Session {
   createdAt: number;
 }
 
-export async function createSession(data: Omit<Session, "createdAt">): Promise<string> {
+export async function createSession(
+  data: Omit<Session, "createdAt">,
+): Promise<string> {
   const kv = await getKv();
   const sessionId = crypto.randomUUID();
   const session: Session = { ...data, createdAt: Date.now() };

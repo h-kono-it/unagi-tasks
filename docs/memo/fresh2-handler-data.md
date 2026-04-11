@@ -1,6 +1,7 @@
 # Fresh 2 のハンドラーからページコンポーネントへのデータの渡し方
 
-Fresh 2 (`@fresh/core@^2.2.2`) でハンドラーからページコンポーネントにデータを渡す方法がドキュメントに明記されておらず、ソースを読んで初めて分かったのでメモ。
+Fresh 2 (`@fresh/core@^2.2.2`)
+でハンドラーからページコンポーネントにデータを渡す方法がドキュメントに明記されておらず、ソースを読んで初めて分かったのでメモ。
 
 ## 結論
 
@@ -42,7 +43,8 @@ return page(data, {
 
 ## なぜそうなるのか
 
-`page()` ヘルパーが `{ data: ..., status: ..., headers: ... }` という構造のオブジェクトを生成し、Fresh 2 の内部処理がそれを読み取る。
+`page()` ヘルパーが `{ data: ..., status: ..., headers: ... }`
+という構造のオブジェクトを生成し、Fresh 2 の内部処理がそれを読み取る。
 
 Fresh 2 の `src/segments.ts` の `renderRoute` 関数：
 
@@ -65,8 +67,9 @@ const result = await renderRouteComponent(ctx, {
 
 ページコンポーネントの `data` prop として渡されるのは **`res.data`** だけ。
 
-`page({ tasks })` は `{ data: { tasks } }` を返すので正しく渡る。  
-`return { tasks }` と書いた場合、`res.data` は `undefined` になるため何も渡されない。
+`page({ tasks })` は `{ data: { tasks } }` を返すので正しく渡る。\
+`return { tasks }` と書いた場合、`res.data` は `undefined`
+になるため何も渡されない。
 
 ## デバッグの手がかり
 
@@ -77,19 +80,21 @@ TypeError: Cannot read properties of undefined (reading 'status')
     at renderRoute (https://jsr.io/@fresh/core/2.2.2/src/segments.ts:151)
 ```
 
-`renderRoute` が `res.status` を読もうとして `undefined` でクラッシュする。このエラーを手がかりにソースを読むと `res.data` の仕様に気づける。
+`renderRoute` が `res.status` を読もうとして `undefined`
+でクラッシュする。このエラーを手がかりにソースを読むと `res.data`
+の仕様に気づける。
 
 ## 戻り値の完全な型イメージ
 
 ```typescript
 // GET ハンドラーが返せる形
 type HandlerResult<Data> =
-  | Response           // リダイレクト・エラーなど
+  | Response // リダイレクト・エラーなど
   | {
-      data?: Data;     // ページコンポーネントの data prop
-      status?: number; // HTTP ステータス（省略時 200）
-      headers?: HeadersInit;
-    };
+    data?: Data; // ページコンポーネントの data prop
+    status?: number; // HTTP ステータス（省略時 200）
+    headers?: HeadersInit;
+  };
 ```
 
 ## 環境

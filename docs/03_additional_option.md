@@ -4,29 +4,35 @@
 
 ## 集中度切り替えの応答速度改善
 
-現状、集中度を変更するとサーバーへのPOST＋ページリロードが発生するため、Deno Deploy の応答速度に依存して若干のもたつきがある。
+現状、集中度を変更するとサーバーへのPOST＋ページリロードが発生するため、Deno
+Deploy の応答速度に依存して若干のもたつきがある。
 
 ### 検討案: スコアリングをクライアントで実行
 
-全タスクを JSON としてページに埋め込み、集中度切り替え時にクライアント側でスコアを再計算してタスクカードの表示順を入れ替える。サーバーへは `fetch` でバックグラウンドPOST するだけで済み、リロードが不要になる。
+全タスクを JSON
+としてページに埋め込み、集中度切り替え時にクライアント側でスコアを再計算してタスクカードの表示順を入れ替える。サーバーへは
+`fetch` でバックグラウンドPOST するだけで済み、リロードが不要になる。
 
 ```typescript
 // 全タスクを script タグに埋め込む（SSR側）
 <script id="tasks-json" type="application/json">
   {JSON.stringify(tasks)}
-</script>
+</script>;
 
 // client.ts 側でスコア再計算 → DOM並び替え
 function reorderByEnergy(energy: number) {
   const tasks = JSON.parse(document.getElementById("tasks-json")!.textContent!);
-  const sorted = tasks.sort((a, b) => calculateScore(b, energy) - calculateScore(a, energy));
+  const sorted = tasks.sort((a, b) =>
+    calculateScore(b, energy) - calculateScore(a, energy)
+  );
   // task-card の順序を並び替え
 }
 ```
 
 実装量は少ない（スコアリング式のコピーとDOM並び替えで30行程度）。今は優先度が低いため保留するが、気になったタイミングで対応する。
 
-また、集中度切り替えのたびにサーバーリクエストが発生しなくなるため、Deno Deploy 無料枠のリクエスト数・CPU 時間の節約にもなる。
+また、集中度切り替えのたびにサーバーリクエストが発生しなくなるため、Deno Deploy
+無料枠のリクエスト数・CPU 時間の節約にもなる。
 
 ---
 

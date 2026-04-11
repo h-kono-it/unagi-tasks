@@ -1,14 +1,24 @@
 import { page } from "fresh";
+import { HttpError } from "fresh";
 import { define } from "../utils.ts";
 import {
   deleteFromInbox,
-  listInbox,
   type InboxItem,
+  listInbox,
   promoteToTask,
-  type Task,
 } from "../utils/db.ts";
 
-export const handlers = define.handlers({
+function validateScore(v: unknown): 1 | 2 | 3 {
+  if (v === 1 || v === 2 || v === 3) return v;
+  throw new HttpError(400);
+}
+
+function validateOrigin(v: unknown): "internal" | "external" {
+  if (v === "internal" || v === "external") return v;
+  throw new HttpError(400);
+}
+
+export const handler = define.handlers({
   async GET(ctx) {
     const { githubId } = ctx.state.session!;
     const items = await listInbox(githubId);
@@ -25,18 +35,28 @@ export const handlers = define.handlers({
     const inboxId = form.get("inboxId")?.toString() ?? "";
 
     if (action === "promote") {
-      const title = form.get("title")?.toString() ?? "";
-      const origin = form.get("origin")?.toString() as Task["origin"];
-      const energy = Number(form.get("energy")) as Task["energy"];
-      const priority = Number(form.get("priority")) as Task["priority"];
+      const title = form.get("title")?.toString().trim() ?? "";
+      if (!title) throw new HttpError(400);
+      const origin = validateOrigin(form.get("origin")?.toString());
+      const energy = validateScore(Number(form.get("energy")));
+      const priority = validateScore(Number(form.get("priority")));
       const dueDate = form.get("dueAt")?.toString();
       const dueAt = dueDate ? new Date(dueDate).getTime() : undefined;
-      await promoteToTask(githubId, inboxId, { title, origin, energy, priority, dueAt });
+      await promoteToTask(githubId, inboxId, {
+        title,
+        origin,
+        energy,
+        priority,
+        dueAt,
+      });
     } else if (action === "delete") {
       await deleteFromInbox(githubId, inboxId);
     }
 
-    return new Response(null, { status: 302, headers: { Location: "/triage" } });
+    return new Response(null, {
+      status: 302,
+      headers: { Location: "/triage" },
+    });
   },
 });
 
@@ -157,7 +177,7 @@ function TriageSlide({ item, first }: { item: InboxItem; first: boolean }) {
   );
 }
 
-export default define.page<typeof handlers>(function Triage({ data }) {
+export default define.page<typeof handler>(function Triage({ data }) {
   const { items } = data;
 
   return (

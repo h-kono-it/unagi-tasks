@@ -5,6 +5,7 @@
 ## 認証・アクセス制御
 
 ### ホワイトリスト解除
+
 `routes/auth/callback.ts` の `ALLOWED_GITHUB_ID` チェックを削除する。
 
 ```typescript
@@ -16,6 +17,7 @@ if (user.id !== allowedGithubId) {
 ```
 
 ### 退会機能
+
 ユーザーが自分のデータをすべて削除できる機能が必要。
 
 - KV から該当 `githubId` のすべてのキーを削除
@@ -46,6 +48,7 @@ export async function deleteAllUserData(githubId: number): Promise<void> {
 ## 法的ドキュメント
 
 ### プライバシーポリシー
+
 最低限記載すべき項目：
 
 - 取得する情報：GitHub のユーザーID・ユーザー名
@@ -56,6 +59,7 @@ export async function deleteAllUserData(githubId: number): Promise<void> {
 - 問い合わせ先
 
 ### 利用規約
+
 最低限記載すべき項目：
 
 - サービス概要
@@ -69,11 +73,13 @@ export async function deleteAllUserData(githubId: number): Promise<void> {
 ## セキュリティ追加対応
 
 ### OAuth state パラメータ
+
 ✅ 実装済み
 
 ### 入力バリデーション強化
-現状は `priority` / `energy` / `origin` の値チェックが緩い。
-不正な値が KV に入らないようにサーバー側でバリデーションを追加する。
+
+現状は `priority` / `energy` / `origin` の値チェックが緩い。 不正な値が KV
+に入らないようにサーバー側でバリデーションを追加する。
 
 ```typescript
 function validatePriority(v: unknown): 1 | 2 | 3 {
@@ -83,6 +89,7 @@ function validatePriority(v: unknown): 1 | 2 | 3 {
 ```
 
 ### レートリミット
+
 大量リクエストへの対策。Deno Deploy 側の機能か、ミドルウェアで実装。
 
 ---
@@ -90,12 +97,15 @@ function validatePriority(v: unknown): 1 | 2 | 3 {
 ## その他
 
 ### GitHub OAuth App の設定更新
+
 - Homepage URL・callback URL を本番ドメインに変更
 - `localhost` 用と本番用で OAuth App を分けることを推奨
 
 ### サインアウトの挙動
-GitHub の認可が残るため、サインアウト後も即座に再ログインできる。
-UX 上の問題になる場合は設定画面に「GitHub の認可を revoke する」リンクを追加することを検討。
+
+GitHub の認可が残るため、サインアウト後も即座に再ログインできる。 UX
+上の問題になる場合は設定画面に「GitHub の認可を revoke
+する」リンクを追加することを検討。
 
 ```
 https://github.com/settings/connections/applications/{CLIENT_ID}

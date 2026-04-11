@@ -1,9 +1,19 @@
 import { page } from "fresh";
 import { HttpError } from "fresh";
 import { define } from "../../../utils.ts";
-import { getTask, updateTask, type Task } from "../../../utils/db.ts";
+import { getTask, updateTask } from "../../../utils/db.ts";
 
-export const handlers = define.handlers({
+function validateScore(v: unknown): 1 | 2 | 3 {
+  if (v === 1 || v === 2 || v === 3) return v;
+  throw new HttpError(400);
+}
+
+function validateOrigin(v: unknown): "internal" | "external" {
+  if (v === "internal" || v === "external") return v;
+  throw new HttpError(400);
+}
+
+export const handler = define.handlers({
   async GET(ctx) {
     const { githubId } = ctx.state.session!;
     const task = await getTask(githubId, ctx.params.id);
@@ -15,13 +25,20 @@ export const handlers = define.handlers({
     const { githubId } = ctx.state.session!;
     const form = await ctx.req.formData();
     const title = form.get("title")?.toString().trim() ?? "";
-    const origin = form.get("origin")?.toString() as Task["origin"];
-    const priority = Number(form.get("priority")) as Task["priority"];
-    const energy = Number(form.get("energy")) as Task["energy"];
+    if (!title) throw new HttpError(400);
+    const origin = validateOrigin(form.get("origin")?.toString());
+    const priority = validateScore(Number(form.get("priority")));
+    const energy = validateScore(Number(form.get("energy")));
     const dueDate = form.get("dueAt")?.toString();
     const dueAt = dueDate ? new Date(dueDate).getTime() : undefined;
 
-    await updateTask(githubId, ctx.params.id, { title, origin, priority, energy, dueAt });
+    await updateTask(githubId, ctx.params.id, {
+      title,
+      origin,
+      priority,
+      energy,
+      dueAt,
+    });
     return new Response(null, { status: 302, headers: { Location: "/tasks" } });
   },
 });
@@ -36,13 +53,15 @@ function toDateInput(ms?: number): string {
   return new Date(ms).toISOString().slice(0, 10);
 }
 
-export default define.page<typeof handlers>(function EditTask({ data }) {
+export default define.page<typeof handler>(function EditTask({ data }) {
   const { task } = data;
 
   return (
     <main class="min-h-screen max-w-lg mx-auto px-4 py-10">
       <div class="flex items-center gap-3 mb-8">
-        <a href="/tasks" class="text-gray-500 hover:text-white text-sm">← 戻る</a>
+        <a href="/tasks" class="text-gray-500 hover:text-white text-sm">
+          ← 戻る
+        </a>
         <h1 class="text-sm font-medium text-gray-300">タスクを編集</h1>
       </div>
 
