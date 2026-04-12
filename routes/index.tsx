@@ -4,10 +4,8 @@ import {
   addToInbox,
   completeTask,
   deleteTask,
-  getUserEnergy,
   listActiveTasks,
   listInbox,
-  setUserEnergy,
 } from "../utils/db.ts";
 import { sortTasksByScore } from "../utils/logic.ts";
 import type { Task } from "../utils/db.ts";
@@ -16,16 +14,14 @@ export const handler = define.handlers({
   async GET(ctx) {
     const { githubId } = ctx.state.session!;
 
-    const [allTasks, inboxItems, userEnergy] = await Promise.all([
+    const [allTasks, inboxItems] = await Promise.all([
       listActiveTasks(githubId),
       listInbox(githubId),
-      getUserEnergy(githubId),
     ]);
 
     return page({
-      tasks: sortTasksByScore(allTasks, userEnergy),
+      tasks: sortTasksByScore(allTasks),
       inboxCount: inboxItems.length,
-      userEnergy,
     });
   },
 
@@ -42,9 +38,6 @@ export const handler = define.handlers({
     } else if (action === "add") {
       const title = form.get("title")?.toString().trim();
       if (title) await addToInbox(githubId, title);
-    } else if (action === "set_energy") {
-      const e = Number(form.get("energy")) as 1 | 2 | 3;
-      if (e >= 1 && e <= 3) await setUserEnergy(githubId, e);
     }
 
     return new Response(null, { status: 302, headers: { Location: "/" } });
@@ -115,7 +108,7 @@ function TaskCard({ task, first }: { task: Task; first: boolean }) {
 
 export default define.page<typeof handler>(function Home({ data, state }) {
   const session = state.session!;
-  const { tasks, inboxCount, userEnergy } = data;
+  const { tasks, inboxCount } = data;
 
   return (
     <main class="min-h-screen max-w-2xl mx-auto px-4 py-10 flex flex-col">
@@ -160,18 +153,16 @@ export default define.page<typeof handler>(function Home({ data, state }) {
           </div>
         </div>
         {/* 2行目: 集中度セレクター */}
-        <form method="POST" class="flex items-center gap-2">
-          <input type="hidden" name="action" value="set_energy" />
+        <div id="energy-form" class="flex items-center gap-2">
           <span class="text-xs text-gray-600 shrink-0">集中度</span>
           <div class="flex flex-1 gap-2">
             {([1, 2, 3] as const).map((e) => (
               <button
                 key={e}
-                type="submit"
-                name="energy"
-                value={String(e)}
+                type="button"
+                data-energy={String(e)}
                 class={`flex-1 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                  userEnergy === e
+                  e === 2
                     ? "bg-white text-black"
                     : "bg-gray-900 text-gray-500 hover:text-white"
                 }`}
@@ -180,8 +171,15 @@ export default define.page<typeof handler>(function Home({ data, state }) {
               </button>
             ))}
           </div>
-        </form>
+        </div>
       </div>
+
+      {/* タスクデータ（クライアントサイドスコア計算用） */}
+      <div
+        id="tasks-json"
+        data-tasks={JSON.stringify(tasks)}
+        style="display:none"
+      />
 
       {/* フォーカスエリア: 全タスクをSSRして hidden で制御、スキップはclient.tsで処理 */}
       <div

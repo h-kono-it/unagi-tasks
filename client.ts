@@ -55,43 +55,119 @@ focusArea?.addEventListener("click", (e) => {
   }
 });
 
+// --- 集中度切り替え（クライアントサイド、サーバー通信なし） ---
+
+interface TaskJson {
+  id: string;
+  priority: 1 | 2 | 3;
+  energy: 1 | 2 | 3;
+  createdAt: number;
+  dueAt?: number;
+}
+
+function calcScore(task: TaskJson, userEnergy: number): number {
+  const ageInHours = (Date.now() - task.createdAt) / (1000 * 60 * 60);
+  const energyMatch = Math.abs(userEnergy - task.energy) * 5;
+  let urgencyBonus = 0;
+  if (task.dueAt) {
+    const DAY_MS = 1000 * 60 * 60 * 24;
+    const daysUntilDue = Math.floor(task.dueAt / DAY_MS) -
+      Math.floor(Date.now() / DAY_MS);
+    if (daysUntilDue < 0) urgencyBonus = 60 + Math.abs(daysUntilDue) * 15;
+    else if (daysUntilDue === 0) urgencyBonus = 60;
+    else if (daysUntilDue <= 7) urgencyBonus = ((7 - daysUntilDue) / 6) * 30;
+  }
+  return task.priority * (10 + urgencyBonus) + ageInHours - energyMatch;
+}
+
+function reorderByEnergy(energy: number) {
+  const jsonEl = document.getElementById("tasks-json");
+  if (!jsonEl || !focusArea) return;
+  const tasks: TaskJson[] = JSON.parse((jsonEl as HTMLElement).dataset.tasks!);
+  const sorted = [...tasks].sort(
+    (a, b) => calcScore(b, energy) - calcScore(a, energy),
+  );
+  for (const task of sorted) {
+    const card = focusArea.querySelector<HTMLElement>(
+      `.task-card[data-task-id="${task.id}"]`,
+    );
+    if (card) focusArea.appendChild(card);
+  }
+  const allSkipped = document.getElementById("all-skipped");
+  if (allSkipped) focusArea.appendChild(allSkipped);
+  skippedIds.length = 0;
+  syncView();
+}
+
+const energyForm = document.getElementById("energy-form");
+if (energyForm) {
+  energyForm.addEventListener("click", (e) => {
+    const btn = (e.target as Element).closest<HTMLButtonElement>(
+      "button[data-energy]",
+    );
+    if (!btn) return;
+    const energy = parseInt(btn.dataset.energy!);
+    if (isNaN(energy)) return;
+
+    energyForm.querySelectorAll<HTMLButtonElement>("button[data-energy]")
+      .forEach((b) => {
+        const selected = parseInt(b.dataset.energy!) === energy;
+        b.className =
+          `flex-1 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+            selected
+              ? "bg-white text-black"
+              : "bg-gray-900 text-gray-500 hover:text-white"
+          }`;
+      });
+
+    reorderByEnergy(energy);
+  });
+}
+
 // --- 完了・削除（楽観的UI） + 二重送信防止 ---
 document.addEventListener("submit", (e) => {
   const form = e.target as HTMLFormElement;
-  const action = form.querySelector<HTMLInputElement>(
-    'input[name="action"]',
-  )?.value;
+  const submitter = (e as SubmitEvent).submitter;
 
-  // capture ハンドラ処理済み or ページリロードで自然防止されるものはスキップ
-  if (action === "add" || action === "set_energy") return;
+  // action は hidden input または submit ボタンの name/value どちらからも取得
+  const action =
+    form.querySelector<HTMLInputElement>('input[name="action"]')?.value ??
+      (submitter instanceof HTMLButtonElement && submitter.name === "action"
+        ? submitter.value
+        : undefined);
 
-  // 完了・削除はメインページのみ楽観的に処理（focusArea が存在する場合）
-  if ((action === "complete" || action === "delete") && focusArea) {
-    const taskId = form.querySelector<HTMLInputElement>(
-      'input[name="id"]',
-    )?.value;
-    if (taskId) {
-      const isLast = focusArea.querySelectorAll(".task-card").length <= 1;
+  // capture ハンドラ処理済みはスキップ
+  if (action === "add") return;
 
-      if (!isLast) {
-        // 複数タスクあり: 楽観的にカード削除 → バックグラウンドPOST
-        e.preventDefault();
-        focusArea
-          .querySelector<HTMLElement>(`.task-card[data-task-id="${taskId}"]`)
-          ?.remove();
-        syncView();
-        fetch(form.getAttribute("action") || location.pathname, {
-          method: "POST",
-          body: new FormData(form),
-        });
-        return;
+  if (action === "complete" || action === "delete") {
+    if (focusArea) {
+      // メインページ: 楽観的UI
+      const taskId = form.querySelector<HTMLInputElement>(
+        'input[name="id"]',
+      )?.value;
+      if (taskId) {
+        const isLast = focusArea.querySelectorAll(".task-card").length <= 1;
+        if (!isLast) {
+          // 複数タスクあり: 楽観的にカード削除 → バックグラウンドPOST
+          e.preventDefault();
+          focusArea
+            .querySelector<HTMLElement>(`.task-card[data-task-id="${taskId}"]`)
+            ?.remove();
+          syncView();
+          fetch(form.getAttribute("action") || location.pathname, {
+            method: "POST",
+            body: new FormData(form),
+          });
+          return;
+        }
       }
-      // 最後の1件: 通常のフォーム送信（リロードでタスクなし表示）
     }
+    // タスク一覧ページ or 最後の1件: 通常のフォーム送信（JS不介入）
+    return;
   }
 
   // その他フォームの二重送信防止（押したボタンだけ disabled）
-  const btn = (e as SubmitEvent).submitter as HTMLButtonElement | null ??
+  const btn = submitter as HTMLButtonElement | null ??
     form.querySelector<HTMLButtonElement>("button[type=submit]") ??
     form.querySelector<HTMLButtonElement>("button:not([type=button])");
   if (btn) btn.disabled = true;
