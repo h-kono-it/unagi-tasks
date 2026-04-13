@@ -22,6 +22,7 @@ export interface Task {
   createdAt: number;
   status: "todo" | "done";
   dueAt?: number; // Unix ms
+  doneAt?: number; // Unix ms（完了時に記録）
 }
 
 // --- Inbox ---
@@ -84,7 +85,7 @@ export async function listActiveTasks(githubId: number): Promise<Task[]> {
   const kv = await getKv();
   const tasks: Task[] = [];
   for await (const entry of kv.list<Task>({ prefix: ["tasks", githubId] })) {
-    tasks.push(entry.value);
+    if (entry.value.status === "todo") tasks.push(entry.value);
   }
   return tasks;
 }
@@ -94,7 +95,13 @@ export async function completeTask(
   id: string,
 ): Promise<void> {
   const kv = await getKv();
-  await kv.delete(["tasks", githubId, id]);
+  const result = await kv.get<Task>(["tasks", githubId, id]);
+  if (!result.value) return;
+  await kv.set(["tasks", githubId, id], {
+    ...result.value,
+    status: "done",
+    doneAt: Date.now(),
+  });
 }
 
 export async function deleteTask(githubId: number, id: string): Promise<void> {
