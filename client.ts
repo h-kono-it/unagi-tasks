@@ -228,6 +228,9 @@ document.addEventListener("submit", (e) => {
     "pomo-volume",
   ) as HTMLInputElement | null;
   const soundTest = document.getElementById("pomo-sound-test");
+  const completeBreak = document.getElementById(
+    "pomo-complete-break",
+  ) as HTMLInputElement | null;
 
   if (!display || !startBtn) return;
 
@@ -337,8 +340,8 @@ document.addEventListener("submit", (e) => {
   });
 
   document.addEventListener("pomo-task-complete", () => {
-    if (timerId === null) return; // タイマー未起動なら何もしない
-    switchPhase();
+    if (timerId === null) return;
+    if (completeBreak?.checked) switchPhase();
   });
 
   stopBtn?.addEventListener("click", stopTimer);

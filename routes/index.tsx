@@ -311,6 +311,15 @@ export default define.page<typeof handler>(function Home({ data, state }) {
             >
               サウンド確認
             </button>
+            <label class="flex items-center gap-1.5 cursor-pointer">
+              <input
+                id="pomo-complete-break"
+                type="checkbox"
+                checked
+                class="accent-blue-500"
+              />
+              タスク完了時に休憩へ移行する
+            </label>
           </div>
         </div>
       </div>
