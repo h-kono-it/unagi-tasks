@@ -221,8 +221,102 @@ export default define.page<typeof handler>(function Home({ data, state }) {
           : <p class="text-gray-500">タスクなし。お疲れさまでした！</p>}
       </div>
 
+      {/* ポモドーロタイマー */}
+      <div id="pomodoro" class="mt-auto pt-8 pb-2">
+        <div class="p-4 bg-gray-900 border border-gray-800 rounded-xl">
+          {/* フェーズ + 時計 */}
+          <div class="flex items-center justify-between mb-3">
+            <span
+              id="pomo-phase"
+              class="text-sm font-semibold px-3 py-1 rounded-full bg-blue-900 text-blue-300"
+            >
+              集中
+            </span>
+            <span
+              id="pomo-display"
+              class="text-3xl font-mono font-bold tabular-nums"
+            >
+              25:00
+            </span>
+            <div class="flex gap-2">
+              <button
+                id="pomo-start"
+                type="button"
+                class="px-4 py-1.5 bg-blue-700 hover:bg-blue-600 rounded-lg text-sm font-medium"
+              >
+                スタート
+              </button>
+              <button
+                id="pomo-stop"
+                type="button"
+                class="px-4 py-1.5 bg-gray-800 hover:bg-gray-700 rounded-lg text-sm font-medium hidden"
+              >
+                ストップ
+              </button>
+            </div>
+          </div>
+          {/* プログレスバー */}
+          <div class="w-full bg-gray-800 rounded-full h-1 mb-3">
+            <div
+              id="pomo-bar"
+              class="bg-blue-500 h-1 rounded-full"
+              style="width:100%"
+            />
+          </div>
+          {/* 設定 */}
+          <div class="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-gray-500">
+            <label class="flex items-center gap-1">
+              集中
+              <select
+                id="pomo-focus-min"
+                class="bg-gray-800 border border-gray-700 rounded px-1.5 py-0.5 text-white"
+              >
+                {[1, 5, 10, 15, 20, 25, 30, 45, 60].map((m) => (
+                  <option key={m} value={String(m)} selected={m === 25}>
+                    {m}
+                  </option>
+                ))}
+              </select>
+              分
+            </label>
+            <label class="flex items-center gap-1">
+              休憩
+              <select
+                id="pomo-break-min"
+                class="bg-gray-800 border border-gray-700 rounded px-1.5 py-0.5 text-white"
+              >
+                {[1, 3, 5, 10, 15].map((m) => (
+                  <option key={m} value={String(m)} selected={m === 5}>
+                    {m}
+                  </option>
+                ))}
+              </select>
+              分
+            </label>
+            <label class="flex items-center gap-1">
+              音量
+              <input
+                id="pomo-volume"
+                type="range"
+                min="0"
+                max="100"
+                value="50"
+                class="w-20 accent-blue-500"
+              />
+            </label>
+            <button
+              id="pomo-sound-test"
+              type="button"
+              class="hover:text-white"
+            >
+              サウンド確認
+            </button>
+          </div>
+        </div>
+      </div>
+
       {/* クイック入力 */}
-      <form method="POST" class="mt-10">
+      <form method="POST" class="mt-4">
         <input type="hidden" name="action" value="add" />
         <div class="flex gap-2">
           <input

@@ -158,6 +158,9 @@ document.addEventListener("submit", (e) => {
             method: "POST",
             body: new FormData(form),
           });
+          if (action === "complete") {
+            document.dispatchEvent(new CustomEvent("pomo-task-complete"));
+          }
           return;
         }
       }
@@ -203,6 +206,148 @@ document.addEventListener("submit", (e) => {
   }
   if (triageCount) triageCount.textContent = String(next);
 }, true); // capture: 二重送信防止ハンドラより前に処理
+
+// --- ポモドーロタイマー ---
+(function setupPomodoro() {
+  const display = document.getElementById("pomo-display");
+  const bar = document.getElementById("pomo-bar") as HTMLDivElement | null;
+  const phaseEl = document.getElementById("pomo-phase");
+  const startBtn = document.getElementById(
+    "pomo-start",
+  ) as HTMLButtonElement | null;
+  const stopBtn = document.getElementById(
+    "pomo-stop",
+  ) as HTMLButtonElement | null;
+  const focusSelect = document.getElementById(
+    "pomo-focus-min",
+  ) as HTMLSelectElement | null;
+  const breakSelect = document.getElementById(
+    "pomo-break-min",
+  ) as HTMLSelectElement | null;
+  const volumeSlider = document.getElementById(
+    "pomo-volume",
+  ) as HTMLInputElement | null;
+  const soundTest = document.getElementById("pomo-sound-test");
+
+  if (!display || !startBtn) return;
+
+  let timerId: ReturnType<typeof setInterval> | null = null;
+  let remaining = 25 * 60;
+  let total = 25 * 60;
+  let phase: "focus" | "break" = "focus";
+
+  function getFocusMin() {
+    return parseInt(focusSelect?.value ?? "25");
+  }
+  function getBreakMin() {
+    return parseInt(breakSelect?.value ?? "5");
+  }
+  function getVolume() {
+    return parseInt(volumeSlider?.value ?? "50") / 100;
+  }
+
+  function fmt(sec: number) {
+    return `${Math.floor(sec / 60).toString().padStart(2, "0")}:${
+      (sec % 60)
+        .toString()
+        .padStart(2, "0")
+    }`;
+  }
+
+  function updateDisplay() {
+    display!.textContent = fmt(remaining);
+    if (bar) bar.style.width = `${Math.round((remaining / total) * 100)}%`;
+  }
+
+  function playBeep(vol: number) {
+    const ctx = new AudioContext();
+    [[880, 0, 0.4], [660, 0.6, 0.4]].forEach(([freq, start, dur]) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = "sine";
+      osc.frequency.value = freq;
+      gain.gain.value = vol;
+      osc.start(ctx.currentTime + start);
+      osc.stop(ctx.currentTime + start + dur);
+    });
+  }
+
+  function stopTimer() {
+    if (timerId !== null) {
+      clearInterval(timerId);
+      timerId = null;
+    }
+    startBtn!.classList.remove("hidden");
+    stopBtn?.classList.add("hidden");
+  }
+
+  function setPhaseStyle(p: "focus" | "break") {
+    if (bar) {
+      bar.className = `h-1 rounded-full ${
+        p === "focus" ? "bg-blue-500" : "bg-green-500"
+      }`;
+    }
+    if (phaseEl) {
+      phaseEl.className = p === "focus"
+        ? "text-sm font-semibold px-3 py-1 rounded-full bg-blue-900 text-blue-300"
+        : "text-sm font-semibold px-3 py-1 rounded-full bg-green-900 text-green-300";
+    }
+  }
+
+  function startTick() {
+    startBtn!.classList.add("hidden");
+    stopBtn?.classList.remove("hidden");
+    timerId = setInterval(() => {
+      remaining = Math.max(0, remaining - 1);
+      updateDisplay();
+      if (remaining === 0) switchPhase();
+    }, 1000);
+  }
+
+  function switchPhase() {
+    if (timerId !== null) {
+      clearInterval(timerId);
+      timerId = null;
+    }
+    playBeep(getVolume());
+    phase = phase === "focus" ? "break" : "focus";
+    total = (phase === "focus" ? getFocusMin() : getBreakMin()) * 60;
+    remaining = total;
+    if (phaseEl) phaseEl.textContent = phase === "focus" ? "集中" : "休憩";
+    setPhaseStyle(phase);
+    updateDisplay();
+    startTick(); // 次のフェーズを自動スタート
+  }
+
+  function resetTimer() {
+    stopTimer();
+    phase = "focus";
+    total = getFocusMin() * 60;
+    remaining = total;
+    if (phaseEl) phaseEl.textContent = "集中";
+    setPhaseStyle("focus");
+    updateDisplay();
+  }
+
+  startBtn.addEventListener("click", () => {
+    if (timerId !== null) return;
+    startTick();
+  });
+
+  document.addEventListener("pomo-task-complete", () => {
+    if (timerId === null) return; // タイマー未起動なら何もしない
+    switchPhase();
+  });
+
+  stopBtn?.addEventListener("click", stopTimer);
+  focusSelect?.addEventListener("change", resetTimer);
+  breakSelect?.addEventListener("change", resetTimer);
+  soundTest?.addEventListener("click", () => playBeep(getVolume()));
+
+  updateDisplay();
+})();
 
 // --- インボックス整理（楽観的UI） ---
 const triageArea = document.getElementById("triage-area");
