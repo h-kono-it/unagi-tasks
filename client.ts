@@ -344,9 +344,57 @@ document.addEventListener("submit", (e) => {
     if (completeBreak?.checked) switchPhase();
   });
 
+  // --- 設定の永続化 ---
+  const POMO_KEYS = {
+    focusMin: "pomo:focusMin",
+    breakMin: "pomo:breakMin",
+    volume: "pomo:volume",
+    completeBreak: "pomo:completeBreak",
+  } as const;
+
+  function saveSettings() {
+    if (focusSelect) {
+      localStorage.setItem(POMO_KEYS.focusMin, focusSelect.value);
+    }
+    if (breakSelect) {
+      localStorage.setItem(POMO_KEYS.breakMin, breakSelect.value);
+    }
+    if (volumeSlider) {
+      localStorage.setItem(POMO_KEYS.volume, volumeSlider.value);
+    }
+    if (completeBreak) {
+      localStorage.setItem(
+        POMO_KEYS.completeBreak,
+        String(completeBreak.checked),
+      );
+    }
+  }
+
+  // 保存済み設定をUIに反映
+  const sv = localStorage.getItem(POMO_KEYS.focusMin);
+  const sb = localStorage.getItem(POMO_KEYS.breakMin);
+  const svol = localStorage.getItem(POMO_KEYS.volume);
+  const scb = localStorage.getItem(POMO_KEYS.completeBreak);
+  if (sv && focusSelect) focusSelect.value = sv;
+  if (sb && breakSelect) breakSelect.value = sb;
+  if (svol && volumeSlider) volumeSlider.value = svol;
+  if (scb !== null && completeBreak) completeBreak.checked = scb === "true";
+
+  // 読み込んだ設定でタイマー初期値を更新
+  total = getFocusMin() * 60;
+  remaining = total;
+
   stopBtn?.addEventListener("click", stopTimer);
-  focusSelect?.addEventListener("change", resetTimer);
-  breakSelect?.addEventListener("change", resetTimer);
+  focusSelect?.addEventListener("change", () => {
+    resetTimer();
+    saveSettings();
+  });
+  breakSelect?.addEventListener("change", () => {
+    resetTimer();
+    saveSettings();
+  });
+  volumeSlider?.addEventListener("input", saveSettings);
+  completeBreak?.addEventListener("change", saveSettings);
   soundTest?.addEventListener("click", () => playBeep(getVolume()));
 
   updateDisplay();
